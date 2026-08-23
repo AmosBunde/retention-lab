@@ -1,0 +1,6 @@
+# E3 arm: 30 percent teacher-generated tokens; mixture block only.
+inherit: ../baseline.yaml
+mixture:
+  sources:
+    corpus: 0.7
+    teacher_generated: 0.3

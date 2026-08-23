@@ -1,0 +1,6 @@
+# E1 arm: reverse KL against the forward-KL baseline; loss block only.
+inherit: ../baseline.yaml
+loss:
+  name: reverse_kl
+  temperature: 2.0
+  alpha: 0.5

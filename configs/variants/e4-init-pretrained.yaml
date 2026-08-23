@@ -1,0 +1,6 @@
+# E4 arm: pretrained pythia-160m initialization; init block only.
+inherit: ../baseline.yaml
+init:
+  source: pretrained
+  repo: EleutherAI/pythia-160m
+  revision: 50f5173d932e8e61f858120bcb800b97af589f46

@@ -1,0 +1,5 @@
+# The control arm: identical architecture, data, budget, and schedule; the
+# teacher term is removed by overriding the loss block alone.
+inherit: ../baseline.yaml
+loss:
+  name: lm_only
