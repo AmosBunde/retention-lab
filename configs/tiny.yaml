@@ -1,0 +1,21 @@
+# The tiny configuration: every code path at CPU scale, no network access.
+# This file is the parent of nothing and inherits nothing; it exists so the
+# quickstart and CI exercise the same shapes real runs use, in miniature.
+
+seed: 1234
+
+model:
+  vocab_size: 32
+  d_model: 64
+  n_layer: 2
+  n_head: 2
+  seq_len: 64
+
+data:
+  source: synthetic
+  n_tokens: 200000
+
+train:
+  steps: 80
+  batch_size: 8
+  lr: 0.01

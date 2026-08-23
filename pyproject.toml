@@ -1,0 +1,49 @@
+[project]
+name = "retention-lab"
+version = "0.1.0"
+description = "A distillation lab with a retention scoreboard: per-capability retention against a pinned teacher, attributed against a no-teacher control."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { file = "LICENSE" }
+authors = [{ name = "Amos Bunde" }]
+dependencies = [
+    "torch>=2.6,<2.8",
+    "numpy>=2.0,<3",
+    "pyyaml>=6.0,<7",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3,<9",
+    "ruff>=0.9,<1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/retention_lab"]
+
+[tool.uv]
+# CPU wheels keep the development and CI environments small; the CUDA image
+# installs the same torch version from the CUDA index (see docker/Dockerfile.cuda).
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
