@@ -1,14 +1,15 @@
 # The scoreboard freeze record.
 #
-# While frozen is false, the scoreboard is under construction and the CI
-# check passes by definition. The freeze commit (#11) flips frozen to true,
-# records the hash printed by `make battery-hash`, and dates it. From then
-# on, any change to the scoreboard inputs fails CI until this file is
-# updated in the same pull request as a raised frozen-battery defect issue,
-# with a history entry explaining what changed and why. Silent patches are
-# forbidden by the build contract.
+# The scoreboard is FROZEN. Any change to the scoreboard inputs (the battery
+# definition and the five scoring sources listed in
+# src/retention_lab/battery/freeze.py) fails CI until this file is updated
+# in the same pull request as a raised frozen-battery defect issue, with a
+# history entry explaining what changed and why. Silent patches are
+# forbidden by the build contract. The teacher denominators are produced
+# once under this hash and stored in tracker/runs/; they are part of the
+# frozen scoreboard.
 
-frozen: false
-hash: null
-frozen_on: null
+frozen: true
+hash: f7cfb197de8d1f75dd4ed606ad9f5be4700df40a7b5bbf5286a1470671167241
+frozen_on: 2026-08-23
 history: []
