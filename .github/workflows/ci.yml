@@ -33,6 +33,8 @@ jobs:
         run: make prose-lint
       - name: Tests
         run: make test
+      - name: Scoreboard freeze check
+        run: make battery-hash
       - name: Smoke (progressive, ADR-0004)
         run: make smoke
 

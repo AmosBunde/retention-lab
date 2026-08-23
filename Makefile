@@ -4,9 +4,9 @@
 UV ?= uv
 RUN := $(UV) run
 
-.PHONY: quickstart env lint prose-lint test smoke mermaid-check clean
+.PHONY: quickstart env lint prose-lint test smoke battery-hash mermaid-check clean
 
-quickstart: env lint prose-lint test smoke
+quickstart: env lint prose-lint test battery-hash smoke
 	@echo "quickstart: OK"
 
 env:
@@ -27,6 +27,10 @@ test:
 smoke:
 	$(RUN) python -m retention_lab.smoke --config configs/tiny.yaml
 	$(RUN) python -m retention_lab.battery.run --config configs/battery/battery.yaml --slice ci --toy
+
+# Recompute the scoreboard hash and verify it against the freeze record.
+battery-hash:
+	$(RUN) python -m retention_lab.battery.freeze --check
 
 # Requires node; runs as its own CI job so quickstart stays node-free.
 mermaid-check:
