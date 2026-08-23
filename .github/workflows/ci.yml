@@ -1,0 +1,45 @@
+# CI runs exactly what a reviewer would run: the quickstart contract, plus a
+# render check for the README diagrams. The smoke step is progressive per
+# ADR-0004 and becomes the tiny knowledge-distillation run at M3.
+
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  quickstart:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Environment
+        run: make env
+      - name: Lint
+        run: make lint
+      - name: Prose lint
+        run: make prose-lint
+      - name: Tests
+        run: make test
+      - name: Smoke (progressive, ADR-0004)
+        run: make smoke
+
+  diagrams:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Render every Mermaid block in tracked Markdown
+        env:
+          MERMAID_CHROME: /usr/bin/google-chrome
+        run: python3 scripts/check_mermaid.py
