@@ -1,0 +1,14 @@
+# The scoreboard freeze record.
+#
+# While frozen is false, the scoreboard is under construction and the CI
+# check passes by definition. The freeze commit (#11) flips frozen to true,
+# records the hash printed by `make battery-hash`, and dates it. From then
+# on, any change to the scoreboard inputs fails CI until this file is
+# updated in the same pull request as a raised frozen-battery defect issue,
+# with a history entry explaining what changed and why. Silent patches are
+# forbidden by the build contract.
+
+frozen: false
+hash: null
+frozen_on: null
+history: []
