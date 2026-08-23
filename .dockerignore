@@ -1,0 +1,13 @@
+# Keep the build context to what the training image needs. README and
+# LICENSE stay because pyproject.toml references both at install time.
+.git
+.venv
+.pytest_cache
+.ruff_cache
+assets
+outputs
+checkpoints
+docs
+*.md
+!README.md
+BREAKDOWN.md

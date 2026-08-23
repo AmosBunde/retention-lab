@@ -1,0 +1,43 @@
+# The pinned training environment for real GPU runs. Every tracker record
+# names the tag of this image that produced it.
+#
+# The dependency set comes from the same uv.lock as CPU development; the one
+# documented divergence is torch itself, replaced by the CUDA build of the
+# identical version after the sync, because the lockfile pins the CPU wheel
+# to keep laptops and CI small (see #3 and ADR-0007 on evidence pinning).
+
+FROM nvidia/cuda:12.6.3-cudnn-runtime-ubuntu24.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    UV_LINK_MODE=copy \
+    PATH=/root/.local/bin:/workspace/repo/.venv/bin:$PATH
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates curl git make \
+    && rm -rf /var/lib/apt/lists/*
+
+# uv pinned by version so image rebuilds stay reproducible.
+RUN curl -LsSf https://astral.sh/uv/0.7.13/install.sh | sh
+
+WORKDIR /workspace/repo
+
+# Dependency layer: changes rarely, caches well.
+COPY .python-version pyproject.toml uv.lock ./
+RUN uv python install && uv sync --frozen --no-install-project
+
+# Source layer.
+COPY . .
+RUN uv sync --frozen --no-editable
+
+# CUDA torch replaces the CPU wheel at the exact locked version. This must be
+# the LAST install step, because any later `uv sync` would revert it to the
+# locked CPU wheel; UV_NO_SYNC keeps `uv run` from doing exactly that at
+# container start.
+RUN TORCH_VERSION=$(uv export --frozen --no-hashes --no-emit-project 2>/dev/null \
+        | grep -E '^torch==' | sed -E 's/^torch==([0-9.]+).*/\1/' | head -n1) \
+    && uv pip install --reinstall "torch==${TORCH_VERSION}" \
+        --index-url https://download.pytorch.org/whl/cu126
+ENV UV_NO_SYNC=1
+
+ENTRYPOINT ["make"]
+CMD ["smoke"]
