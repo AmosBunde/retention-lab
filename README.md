@@ -173,7 +173,7 @@ sequenceDiagram
     B->>G: Provision instance, pull pinned CUDA image from GHCR
     G->>G: Resume check: load checkpoint, optimizer, RNG, data cursor if present
     loop Training
-        G->>G: Train with pinned data order; checkpoint every N steps
+        G->>G: Train with pinned data order, checkpoint every N steps
         Note over G: If the instance is reclaimed, the next launch resumes bit-identically
     end
     G->>G: Score frozen battery slice for the trained student
