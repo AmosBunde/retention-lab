@@ -20,6 +20,11 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock
+      - name: Cache battery datasets
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-datasets-${{ hashFiles('configs/battery/battery.yaml') }}
       - name: Environment
         run: make env
       - name: Lint

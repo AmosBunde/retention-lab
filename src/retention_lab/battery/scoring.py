@@ -31,6 +31,15 @@ class MCItem:
 
 
 @dataclass(frozen=True)
+class ContextChoiceItem:
+    """Choice-dependent contexts with one shared continuation (Winogrande)."""
+
+    contexts: tuple[str, ...]
+    continuation: str
+    gold: int
+
+
+@dataclass(frozen=True)
 class GreedyItem:
     context: str
     continuation: str
@@ -41,6 +50,7 @@ class TaskResult:
     task: str
     metric: str  # "accuracy" or "bpb"
     value: float
+    chance: float  # score of a chance-level model on the same items
     n_items: int
     per_item: tuple[float, ...]
 
@@ -59,24 +69,51 @@ def score_multiple_choice(lm: LM, task: str, items: Sequence[MCItem]) -> TaskRes
             normed.append(result.logprob / n_bytes)
         best = max(range(len(normed)), key=lambda i: (normed[i], -i))
         per_item.append(1.0 if best == item.gold else 0.0)
-    return TaskResult(task, "accuracy", _mean(per_item), len(per_item), tuple(per_item))
+    chance = _mean([1.0 / len(item.choices) for item in items])
+    return TaskResult(task, "accuracy", _mean(per_item), chance, len(per_item), tuple(per_item))
+
+
+def score_context_choice(
+    lm: LM, task: str, items: Sequence[ContextChoiceItem]
+) -> TaskResult:
+    """Pick the context under which the shared continuation is most likely.
+
+    No length normalization is needed: the continuation is identical across
+    the candidate contexts, so raw log-likelihoods are directly comparable.
+    """
+    per_item = []
+    for item in items:
+        if not 0 <= item.gold < len(item.contexts):
+            raise ValueError(f"{task}: gold index {item.gold} out of range")
+        scores = [lm.loglikelihood(ctx, item.continuation).logprob for ctx in item.contexts]
+        best = max(range(len(scores)), key=lambda i: (scores[i], -i))
+        per_item.append(1.0 if best == item.gold else 0.0)
+    chance = _mean([1.0 / len(item.contexts) for item in items])
+    return TaskResult(task, "accuracy", _mean(per_item), chance, len(per_item), tuple(per_item))
 
 
 def score_greedy(lm: LM, task: str, items: Sequence[GreedyItem]) -> TaskResult:
+    """Exact-continuation scoring; a chance-level model scores zero."""
     per_item = []
     for item in items:
         result = lm.loglikelihood(item.context, item.continuation)
         per_item.append(1.0 if result.greedy else 0.0)
-    return TaskResult(task, "accuracy", _mean(per_item), len(per_item), tuple(per_item))
+    return TaskResult(task, "accuracy", _mean(per_item), 0.0, len(per_item), tuple(per_item))
 
 
 def score_bits_per_byte(
-    lm: LM, task: str, docs: Sequence[str], tokenizer: Tokenizer
+    lm: LM, task: str, docs: Sequence[str], tokenizer: Tokenizer, vocab_size: int
 ) -> TaskResult:
-    """Bits per byte over documents; per-item values are per-document BPB."""
+    """Bits per byte over documents; per-item values are per-document BPB.
+
+    The chance level is the bits per byte of a uniform distribution over the
+    vocabulary, computed with exactly the same token accounting as the model
+    score, so chance and value are comparable term for term.
+    """
     per_item = []
     total_nll = 0.0
     total_bytes = 0
+    total_scored_tokens = 0
     for doc in docs:
         tokens = tokenizer.encode(doc)
         if len(tokens) < 2:
@@ -86,8 +123,10 @@ def score_bits_per_byte(
         per_item.append(nll / (math.log(2) * n_bytes))
         total_nll += nll
         total_bytes += n_bytes
+        total_scored_tokens += len(tokens) - 1
     value = total_nll / (math.log(2) * total_bytes)
-    return TaskResult(task, "bpb", value, len(per_item), tuple(per_item))
+    chance = (total_scored_tokens * math.log2(vocab_size)) / total_bytes
+    return TaskResult(task, "bpb", value, chance, len(per_item), tuple(per_item))
 
 
 def group_by_capability(

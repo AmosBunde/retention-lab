@@ -1,0 +1,123 @@
+# The task battery: the single frozen definition of what the study measures.
+#
+# Everything the freeze hash covers lives in this file: tasks, dataset pins,
+# prompt templates, slice selection, and the bootstrap seed. After the M1
+# freeze (#9), any edit here fails CI unless it arrives with a raised
+# frozen-battery defect issue and a new freeze record.
+#
+# Dataset revisions are exact commit SHAs resolved from the Hugging Face hub
+# API on 2026-08-23. License strings record the hub card value; where a card
+# declares none, the source repository license is recorded with that caveat.
+
+version: 1
+seed: 20260823
+bootstrap:
+  resamples: 10000
+ci_items_per_task: 24
+
+capabilities:
+  core-lm: [wikitext2-bpb]
+  recall: [sciq, arc-easy]
+  commonsense: [hellaswag, piqa, winogrande]
+  comprehension: [lambada-openai, boolq]
+
+tasks:
+  sciq:
+    kind: multiple-choice
+    builder: sciq
+    eval_cap: 1000
+    license: cc-by-nc-3.0
+    source:
+      repo: allenai/sciq
+      config: null
+      split: validation
+      revision: 2c94ad3e1aafab77146f384e23536f97a4849815
+    prompt: "{support_block}Question: {question}\nAnswer:"
+
+  arc-easy:
+    kind: multiple-choice
+    builder: arc
+    eval_cap: 1000
+    license: cc-by-sa-4.0
+    source:
+      repo: allenai/ai2_arc
+      config: ARC-Easy
+      split: test
+      revision: 210d026faf9955653af8916fad021475a3f00453
+    prompt: "Question: {question}\nAnswer:"
+
+  hellaswag:
+    kind: multiple-choice
+    builder: hellaswag
+    eval_cap: 1000
+    license: "MIT in the source repository; no license declared on the hub card"
+    source:
+      repo: Rowan/hellaswag
+      config: null
+      split: validation
+      revision: 218ec52e09a7e7462a5400043bb9a69a41d06b76
+    prompt: "{activity_label}: {ctx}"
+
+  piqa:
+    kind: multiple-choice
+    builder: piqa
+    eval_cap: 1000
+    license: "AFL-3.0 in the source repository; hub card declares unknown"
+    source:
+      # Script-era dataset: loaded from the parquet conversion ref, pinned by
+      # its own commit SHA, because datasets>=3 no longer executes scripts.
+      repo: ybisk/piqa
+      config: null
+      split: validation
+      revision: 142c51238b3ca2bc61e9a075913871b8b600e8e1
+      parquet_path: plain_text/validation/0000.parquet
+    prompt: "Question: {goal}\nAnswer:"
+
+  winogrande:
+    kind: context-choice
+    builder: winogrande
+    eval_cap: 1000
+    license: "Apache-2.0 in the source repository; no license declared on the hub card"
+    source:
+      repo: allenai/winogrande
+      config: winogrande_xl
+      split: validation
+      revision: 01e74176c63542e6b0bcb004dcdea22d94fb67b5
+    prompt: null
+
+  lambada-openai:
+    kind: greedy
+    builder: lambada
+    eval_cap: 1000
+    license: mit
+    source:
+      repo: EleutherAI/lambada_openai
+      config: en
+      split: test
+      revision: 900124bf3b8235c6daf21033af9948b3f07346c4
+    prompt: null
+
+  boolq:
+    kind: multiple-choice
+    builder: boolq
+    eval_cap: 1000
+    license: cc-by-sa-3.0
+    source:
+      repo: google/boolq
+      config: null
+      split: validation
+      revision: 35b264d03638db9f4ce671b711558bf7ff0f80d5
+    prompt: "{passage}\nQuestion: {question}?\nAnswer:"
+
+  wikitext2-bpb:
+    kind: bits-per-byte
+    builder: wikitext
+    eval_cap: 128
+    doc_chars: 4096
+    license: cc-by-sa-3.0
+    source:
+      repo: Salesforce/wikitext
+      config: wikitext-2-raw-v1
+      split: test
+      revision: b08601e04326c79dfdd32d625aee71d232d685c3
+    prompt: null
