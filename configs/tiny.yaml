@@ -1,6 +1,7 @@
 # The tiny configuration: every code path at CPU scale, no network access.
-# This file is the parent of nothing and inherits nothing; it exists so the
-# quickstart and CI exercise the same shapes real runs use, in miniature.
+# Since M3 this is a real two-phase distillation in miniature: the toy
+# teacher trains on the synthetic corpus first, then the smaller student
+# distills from it with the configured KD objective.
 
 seed: 1234
 
@@ -11,11 +12,32 @@ model:
   n_head: 2
   seq_len: 64
 
+teacher_model:
+  vocab_size: 32
+  d_model: 96
+  n_layer: 3
+  n_head: 2
+  seq_len: 64
+
 data:
   source: synthetic
   n_tokens: 200000
 
-train:
-  steps: 80
+loss:
+  name: forward_kl
+  temperature: 2.0
+  alpha: 0.5
+
+teacher_train:
+  steps: 50
   batch_size: 8
   lr: 0.01
+  warmup_steps: 5
+  min_lr_ratio: 0.1
+
+train:
+  steps: 60
+  batch_size: 8
+  lr: 0.01
+  warmup_steps: 5
+  min_lr_ratio: 0.1
