@@ -1,0 +1,433 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Retention Lab",
+    "subtitle": "Distillation study with a frozen retention scoreboard, control attribution, and a file-based evidence tracker",
+    "output": "architecture.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "frozen-scoreboard",
+        "label": "Frozen scoreboard",
+        "focus": [
+          "battery",
+          "metric",
+          "bands",
+          "denom"
+        ],
+        "note": "Battery, metric, bands, and teacher denominators freeze by hash at the end of M1."
+      },
+      {
+        "id": "training-paths",
+        "label": "Training paths",
+        "focus": [
+          "packing",
+          "kdloss",
+          "loop",
+          "control",
+          "variants"
+        ],
+        "note": "One loop trains every arm; variants override exactly one config block."
+      },
+      {
+        "id": "evidence-trail",
+        "label": "Evidence trail",
+        "focus": [
+          "loop",
+          "tracker",
+          "metric",
+          "report"
+        ],
+        "note": "Only real runs write tracker records; tables are generated from them alone."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "teacher",
+      "type": "external",
+      "label": "Teacher pythia-1.4b",
+      "sublabel": "pinned revision",
+      "pos": [
+        250,
+        60
+      ],
+      "size": [
+        150,
+        64
+      ],
+      "tag": "Apache-2.0"
+    },
+    {
+      "id": "kdloss",
+      "type": "backend",
+      "label": "KD loss zoo",
+      "sublabel": "fKL, rKL, MSE, T, layers",
+      "pos": [
+        520,
+        60
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "corpus",
+      "type": "database",
+      "label": "Corpus slice",
+      "sublabel": "FineWeb-Edu, sha256",
+      "pos": [
+        40,
+        200
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "teachgen",
+      "type": "database",
+      "label": "Teacher-gen data",
+      "sublabel": "labeled by source",
+      "pos": [
+        40,
+        340
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "packing",
+      "type": "backend",
+      "label": "Mixture + packing",
+      "sublabel": "seed-pinned order",
+      "pos": [
+        270,
+        270
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "loop",
+      "type": "backend",
+      "label": "Training loop",
+      "sublabel": "AMP, accum, resume",
+      "pos": [
+        520,
+        270
+      ],
+      "size": [
+        150,
+        64
+      ],
+      "tag": "kill-tested"
+    },
+    {
+      "id": "variants",
+      "type": "frontend",
+      "label": "Experiment variants",
+      "sublabel": "one block, two seeds",
+      "pos": [
+        270,
+        470
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "control",
+      "type": "frontend",
+      "label": "Control student",
+      "sublabel": "no teacher signal",
+      "pos": [
+        520,
+        470
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "battery",
+      "type": "security",
+      "label": "Task battery",
+      "sublabel": "4 capabilities, zero-shot",
+      "pos": [
+        810,
+        130
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "metric",
+      "type": "security",
+      "label": "Retention metric",
+      "sublabel": "R_c and attribution A_c",
+      "pos": [
+        1090,
+        130
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "bands",
+      "type": "security",
+      "label": "Noise-band policy",
+      "sublabel": "seed + bootstrap",
+      "pos": [
+        810,
+        280
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "denom",
+      "type": "security",
+      "label": "Teacher denominators",
+      "sublabel": "scored once, stored",
+      "pos": [
+        1090,
+        280
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "tracker",
+      "type": "database",
+      "label": "Run tracker",
+      "sublabel": "gpu_hours, cost_usd",
+      "pos": [
+        810,
+        500
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "tag": "real runs only"
+    },
+    {
+      "id": "report",
+      "type": "cloud",
+      "label": "Report + tables",
+      "sublabel": "band verdicts everywhere",
+      "pos": [
+        1090,
+        500
+      ],
+      "size": [
+        170,
+        64
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "security-group",
+      "label": "Frozen scoreboard: hash-checked in CI after M1",
+      "wraps": [
+        "battery",
+        "metric",
+        "bands",
+        "denom"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "corpus-tokens",
+      "from": "corpus",
+      "to": "packing"
+    },
+    {
+      "id": "teachgen-share",
+      "from": "teachgen",
+      "to": "packing",
+      "variant": "dashed"
+    },
+    {
+      "id": "teacher-generates",
+      "from": "teacher",
+      "to": "teachgen",
+      "label": "generates",
+      "variant": "dashed",
+      "fromSide": "left",
+      "toSide": "left",
+      "via": [
+        [
+          15,
+          92
+        ],
+        [
+          15,
+          372
+        ]
+      ]
+    },
+    {
+      "id": "teacher-logits",
+      "from": "teacher",
+      "to": "kdloss",
+      "label": "logits"
+    },
+    {
+      "id": "kdloss-to-loop",
+      "from": "kdloss",
+      "to": "loop",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "packing-batches",
+      "from": "packing",
+      "to": "loop",
+      "variant": "emphasis"
+    },
+    {
+      "id": "variant-configs",
+      "from": "variants",
+      "to": "loop",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "control-config",
+      "from": "control",
+      "to": "loop",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "loop-checkpoints",
+      "from": "loop",
+      "to": "battery",
+      "label": "checkpoints",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left",
+      "via": [
+        [
+          760,
+          302
+        ],
+        [
+          760,
+          162
+        ]
+      ]
+    },
+    {
+      "id": "battery-scores-out",
+      "from": "battery",
+      "to": "metric",
+      "label": "S_c, C_c"
+    },
+    {
+      "id": "denom-tc",
+      "from": "denom",
+      "to": "metric",
+      "label": "T_c",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "bands-verdicts",
+      "from": "bands",
+      "to": "metric",
+      "label": "verdicts"
+    },
+    {
+      "id": "metric-tables",
+      "from": "metric",
+      "to": "report",
+      "label": "tables",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "right",
+      "via": [
+        [
+          1330,
+          162
+        ],
+        [
+          1330,
+          532
+        ]
+      ]
+    },
+    {
+      "id": "loop-costs",
+      "from": "loop",
+      "to": "tracker",
+      "label": "hours, cost"
+    },
+    {
+      "id": "tracker-columns",
+      "from": "tracker",
+      "to": "report"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Frozen scoreboard",
+      "items": [
+        "Battery, metric, bands, denominators freeze by sha256 at end of M1",
+        "CI recomputes the hash on every pull request",
+        "Defects are raised as issues, never patched silently"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Distillation core",
+      "items": [
+        "One loop trains every arm behind one KD interface",
+        "Kill-and-resume test proves bit-identical continuation",
+        "Control student trains first with no teacher term"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Data pipeline",
+      "items": [
+        "Assets pinned by revision and sha256; weights never enter git",
+        "Teacher-generated data labeled by source in mixture configs",
+        "Packing order is a pure function of the shared seed"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Evidence",
+      "items": [
+        "Tracker records carry mandatory GPU hours and cost",
+        "Only real executions produce records",
+        "Every table is generated from tracker files alone"
+      ]
+    }
+  ]
+}
