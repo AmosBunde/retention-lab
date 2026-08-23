@@ -4,7 +4,7 @@
 UV ?= uv
 RUN := $(UV) run
 
-.PHONY: quickstart env lint prose-lint test smoke battery-hash mermaid-check clean
+.PHONY: quickstart env lint prose-lint test smoke battery-hash assets mermaid-check clean
 
 quickstart: env lint prose-lint test battery-hash smoke
 	@echo "quickstart: OK"
@@ -27,6 +27,12 @@ test:
 smoke:
 	$(RUN) python -m retention_lab.smoke --config configs/tiny.yaml
 	$(RUN) python -m retention_lab.battery.run --config configs/battery/battery.yaml --slice ci --toy
+
+# Download pinned assets (weights, data) into the git-ignored assets/ tree,
+# verifying every file against the sha256 manifest. Not part of quickstart:
+# the tiny path and CI never need real weights.
+assets:
+	$(RUN) python -m retention_lab.data.assets
 
 # Recompute the scoreboard hash and verify it against the freeze record.
 battery-hash:

@@ -1,0 +1,50 @@
+# Pinned assets: exact revisions, licenses, and sha256 for every file that
+# `make assets` downloads. Weights and data never enter git; this manifest
+# and the download code are the reproducibility contract instead.
+#
+# Revisions and hashes were resolved from the Hugging Face API on
+# 2026-08-23 (LFS oids for weights, locally computed sha256 for small
+# files), never guessed. The corpus section is added by the corpus issue.
+
+models:
+  teacher:
+    repo: EleutherAI/pythia-1.4b
+    revision: fedc38a16eea3bd36a96b906d78d11d2ce18ed79
+    license: apache-2.0
+    files:
+      config.json:
+        size: 570
+        sha256: 6ea552aa42b7437f019ccdd30b7c9b83a32dccb5170ce31b9ddbe94d00f4671c
+      model.safetensors:
+        size: 2930002184
+        sha256: ad4388632e922d0c58c23cb315292d516deb70af0573f9c1543ce84158bff59c
+      special_tokens_map.json:
+        size: 99
+        sha256: 6f50ab5a5a509a1c309d6171f339b196a900dc9c99ad0408ff23bb615fdae7ad
+      tokenizer.json:
+        size: 2113710
+        sha256: c24618a1b3e6a38167beff1c72cffd126c3a66254347304b50547d12c5f25624
+      tokenizer_config.json:
+        size: 396
+        sha256: 70e38394e494931c6f773ba41e19460dd4436526b852207367f04341b4066d3f
+
+  student-pretrained:
+    repo: EleutherAI/pythia-160m
+    revision: 50f5173d932e8e61f858120bcb800b97af589f46
+    license: apache-2.0
+    files:
+      config.json:
+        size: 569
+        sha256: 76eb275107220e450d31258f792a2efcbee109d8b62ae0088260057dec06362f
+      model.safetensors:
+        size: 374998696
+        sha256: 29d2e457a664e41c12c735f20a36dc0956a665f614a54ce5db21a32e75965270
+      special_tokens_map.json:
+        size: 99
+        sha256: 6f50ab5a5a509a1c309d6171f339b196a900dc9c99ad0408ff23bb615fdae7ad
+      tokenizer.json:
+        size: 2113710
+        sha256: c24618a1b3e6a38167beff1c72cffd126c3a66254347304b50547d12c5f25624
+      tokenizer_config.json:
+        size: 396
+        sha256: 70e38394e494931c6f773ba41e19460dd4436526b852207367f04341b4066d3f
