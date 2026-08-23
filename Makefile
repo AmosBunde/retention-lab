@@ -4,7 +4,7 @@
 UV ?= uv
 RUN := $(UV) run
 
-.PHONY: quickstart env lint prose-lint test smoke battery-hash assets mermaid-check clean
+.PHONY: quickstart env lint prose-lint test smoke battery-hash assets results mermaid-check clean
 
 quickstart: env lint prose-lint test battery-hash smoke
 	@echo "quickstart: OK"
@@ -44,3 +44,7 @@ mermaid-check:
 
 clean:
 	rm -rf .venv .pytest_cache .ruff_cache
+
+# Render every results table from tracker records; the only path into a table.
+results:
+	$(RUN) python -m retention_lab.tracker.results
