@@ -72,10 +72,39 @@ def test_greedy_scorer_uses_greedy_flag():
 
 def test_bpb_uniform_model_is_exact():
     docs = ["hello world", "retention"]
-    result = score_bits_per_byte(PerByteLM(), "fixture", docs, TOKENIZER)
+    result = score_bits_per_byte(PerByteLM(), "fixture", docs, TOKENIZER, vocab_size=32)
     n = [len(d.encode("utf-8")) for d in docs]
     expected = (sum(x - 1 for x in n) * math.log(32)) / (math.log(2) * sum(n))
     assert result.value == pytest.approx(expected, abs=1e-12)
+    # PerByteLM is exactly the uniform model over 32 tokens, so the chance
+    # level must equal the measured value.
+    assert result.chance == pytest.approx(result.value, abs=1e-12)
+
+
+def test_mc_chance_averages_choice_counts():
+    from retention_lab.battery.scoring import score_multiple_choice as smc
+
+    items = [
+        MCItem("c", ("a", "b"), 0),
+        MCItem("c", ("a", "b", "cc", "d"), 0),
+    ]
+    result = smc(PerByteLM(), "fixture", items)
+    assert result.chance == pytest.approx((0.5 + 0.25) / 2)
+
+
+def test_context_choice_prefers_likelier_context():
+    from retention_lab.battery.scoring import ContextChoiceItem, score_context_choice
+
+    class ContextLM(PerByteLM):
+        def loglikelihood(self, context, continuation):
+            base = super().loglikelihood(context, continuation)
+            bonus = 1.0 if context.endswith("good") else 0.0
+            return LLResult(base.logprob + bonus, base.greedy, base.n_tokens)
+
+    item = ContextChoiceItem(("prefix good", "prefix bad"), " tail", gold=0)
+    result = score_context_choice(ContextLM(), "fixture", [item])
+    assert result.value == 1.0
+    assert result.chance == 0.5
 
 
 def test_chunked_token_scoring_counts_each_token_once():

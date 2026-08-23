@@ -26,6 +26,7 @@ test:
 # upgrades it to the tiny knowledge-distillation run and it stays that way.
 smoke:
 	$(RUN) python -m retention_lab.smoke --config configs/tiny.yaml
+	$(RUN) python -m retention_lab.battery.run --config configs/battery/battery.yaml --slice ci --toy
 
 # Requires node; runs as its own CI job so quickstart stays node-free.
 mermaid-check:
