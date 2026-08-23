@@ -1,0 +1,5 @@
+# E3 mixture: 30 percent teacher-generated tokens, labeled at the source by
+# the generation pipeline (configs/teachergen.yaml), 70 percent corpus.
+sources:
+  corpus: 0.7
+  teacher_generated: 0.3

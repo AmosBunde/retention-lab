@@ -1,0 +1,4 @@
+# Baseline mixture: corpus only. Every experiment arm except E3 trains on
+# this; E3 overrides exactly this block with teachergen-30.yaml.
+sources:
+  corpus: 1.0
