@@ -4,7 +4,7 @@
 UV ?= uv
 RUN := $(UV) run
 
-.PHONY: quickstart env lint prose-lint test smoke clean
+.PHONY: quickstart env lint prose-lint test smoke mermaid-check clean
 
 quickstart: env lint prose-lint test smoke
 	@echo "quickstart: OK"
@@ -26,6 +26,10 @@ test:
 # upgrades it to the tiny knowledge-distillation run and it stays that way.
 smoke:
 	$(RUN) python -m retention_lab.smoke --config configs/tiny.yaml
+
+# Requires node; runs as its own CI job so quickstart stays node-free.
+mermaid-check:
+	python3 scripts/check_mermaid.py
 
 clean:
 	rm -rf .venv .pytest_cache .ruff_cache
