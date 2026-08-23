@@ -229,7 +229,7 @@ cd retention-lab
 make quickstart
 ```
 
-Quickstart creates the virtual environment from the lockfile, installs the package, runs the linter and the unit tests, and executes the tiny end-to-end path defined by `configs/tiny.yaml`: a toy-sized model, a bundled synthetic data slice, and (after M1) a battery slice, entirely on CPU in a few minutes. The same target runs in CI on every pull request, and its scope grows with the project: at M0 it exercises the package and the tiny path, at M1 it adds the battery slice and the freeze-hash check, and at M3 it becomes a tiny knowledge-distillation smoke run (ADR-0004).
+Quickstart creates the virtual environment from the lockfile, installs the package, runs the linter, the prose lint, the unit tests (including the config-diff, data-determinism, and kill-and-resume suites), the frozen-scoreboard hash check, and the smoke run, entirely on CPU in about a minute. The smoke target reached its final ADR-0004 form at M3: a toy teacher trains on the bundled synthetic corpus, a smaller toy student distills from it with the configured KD objective, both loss traces must decrease, and the CI battery slice is scored with the toy model. The same target runs in CI on every pull request.
 
 ## 9. Deployment guide for a new developer
 
@@ -244,17 +244,28 @@ A step-by-step path from nothing to a reproduced result.
 
 ### 9.2 Reproducing evaluation numbers
 
-1. Download pinned assets: `make assets` runs the download scripts in `src/retention_lab/data/`, verifies every file against the sha256 manifest in `configs/assets.yaml`, and refuses to proceed on any mismatch. Weights and data land under `assets/` which is git-ignored.
-2. Verify the freeze: `make battery-hash` recomputes the battery content hash and compares it with the frozen value; CI runs the same check.
-3. Score a checkpoint: `make battery CKPT=path/to/checkpoint` scores the full battery on CPU (slow but exact) or inside the CUDA image on GPU, and prints the per-capability table with retention, attribution, and band verdicts computed from the stored teacher denominators and tracker records.
+1. Download pinned assets: `make assets` fetches both Pythia models and the two corpus shards, verifies every file against the sha256 manifest in `configs/assets.yaml`, and refuses to proceed on any mismatch. Weights and data land under `assets/`, which is git-ignored; reruns are idempotent.
+2. Verify the freeze: `make battery-hash` recomputes the scoreboard content hash (battery definition plus scoring code) and compares it with the frozen value in `configs/battery/FREEZE.yaml`; CI runs the same check.
+3. Score a pinned model: `uv run python -m retention_lab.battery.score_model --model <repo> --revision <sha> --kind student --run-id <id> --slice full --device cpu --hourly-rate-usd <rate> --instance <name> --image-tag <tag> --out <file>` runs the full frozen battery and writes a schema-complete record; hours are measured and cost is derived, never typed in.
+4. Rebuild every results table: `make results` renders retention tables exclusively from the committed records in `tracker/runs/`, and refuses to show a student without the teacher denominators and a control record.
 
 ### 9.3 GPU training environment
 
 1. Pull the pinned image: `docker pull ghcr.io/amosbunde/retention-lab-cuda:<tag>`; the tag for every result is recorded in its tracker file.
-2. Provision a single-GPU instance (the study targets one 24 GB to 40 GB card) with a persistent volume mounted at `/workspace`.
-3. Launch training: `docker run --gpus all -v /workspace:/workspace ghcr.io/amosbunde/retention-lab-cuda:<tag> make train CONFIG=configs/variants/<variant>.yaml SEED=<seed>`. The loop checkpoints on a fixed step cadence to the volume.
-4. Reclaims are safe by design: relaunching the same command resumes from the last checkpoint with bit-identical optimizer state, data order, and RNG streams; the kill-and-resume test in CI guards this property.
-5. After the run, the battery is scored and the tracker record (with GPU hours and marketplace cost) is committed through the pull request for that experiment.
+2. Provision a single-GPU instance (the study targets one 24 GB to 40 GB card) with a persistent volume mounted at `/workspace`, and run `make assets` once inside the image to download and verify all pinned weights and corpus shards.
+3. Launch one arm at one seed:
+
+   ```bash
+   docker run --gpus all -v /workspace:/workspace ghcr.io/amosbunde/retention-lab-cuda:<tag> -- \
+     uv run python -m retention_lab.train.run_training \
+       --config configs/variants/<variant>.yaml --seed <1 or 2> \
+       --device cuda --bf16 --out-dir /workspace/runs/<variant>-seed<seed> \
+       --hourly-rate-usd <rate> --instance "<provider and card>" --image-tag <tag>
+   ```
+
+   The loop checkpoints on the config cadence to the volume, and on completion scores the full frozen battery and writes the schema-complete tracker record (measured hours, derived cost, config hash, seed, tokens, reclaim count) into the output directory for the pull request.
+4. Reclaims are safe by design: relaunching the same command resumes from the last checkpoint with bit-identical optimizer state, data order, and RNG streams, and increments the recorded reclaim count; the SIGKILL kill-and-resume test in CI guards this property.
+5. A `--steps-override N` calibration segment verifies assets, memory headroom, and throughput on the instance before a full run commits; the override is stamped into the run output and calibration output never enters the tracker.
 
 ## 10. GPU runs, budget, and cost tracking
 
@@ -298,13 +309,14 @@ Results tables are generated from `tracker/runs/` records of real GPU runs and i
 
 | Run | Status |
 |---|---|
-| teacher battery scoring (denominators) | awaiting owner approval (end of M1) |
-| control, seeds 1 and 2 | awaiting M3 |
-| E1 forward KL baseline and reverse KL, seeds 1 and 2 | awaiting M4 |
-| E2 temperature, seeds 1 and 2 | awaiting M4 |
-| E3 mixture, seeds 1 and 2 | awaiting M4 |
-| E4 initialization, seeds 1 and 2 | awaiting M4 |
-| INT8 pass on the best student | awaiting M5 |
+| teacher battery scoring (denominators) | approval requested on issue #10; command and estimate posted |
+| control, seeds 1 and 2 | approval requested on issue #22; command, calibration plan, and estimate posted |
+| teacher generation (E3 data pool) | pipeline merged; pool-size decision and approval pending with the E3 request |
+| E1 forward KL baseline and reverse KL, seeds 1 and 2 | configs merged and config-diff enforced; runs follow the control results |
+| E2 temperature, seeds 1 and 2 | configs merged; runs follow the control results |
+| E3 mixture, seeds 1 and 2 | configs merged; runs follow the generation pool |
+| E4 initialization, seeds 1 and 2 | configs merged; runs follow the control results |
+| INT8 pass on the best student | quantization and measurement protocol merged; awaits the best student |
 
 ## 13. Engineering guarantees
 
