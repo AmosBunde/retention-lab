@@ -247,7 +247,7 @@
   "boundaries": [
     {
       "kind": "security-group",
-      "label": "Frozen scoreboard: hash-checked in CI after M1",
+      "label": "Frozen scoreboard: frozen 2026-08-23, hash-checked in CI",
       "wraps": [
         "battery",
         "metric",

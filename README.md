@@ -54,7 +54,9 @@ All tasks are zero-shot and scored by deterministic log-likelihood comparison or
 | commonsense | HellaSwag, PIQA, Winogrande | accuracy (length-normalized log-likelihood choice) | 0.25, 0.50, 0.50 |
 | comprehension | LAMBADA (OpenAI variant), BoolQ | accuracy (exact final word; log-likelihood choice) | 0.00, 0.50 |
 
-Capability scores are the unweighted mean of chance-adjusted task scores inside the group. Task lists, evaluation slice identifiers, prompt formats, and metric definitions are frozen together at the end of M1; the freeze hash is checked in CI on every pull request.
+Capability scores are the unweighted mean of chance-adjusted task scores inside the group. Task lists, evaluation slice identifiers, prompt formats, and metric definitions are frozen together with the scoring code at the end of M1; the freeze hash is checked in CI on every pull request.
+
+**Freeze status: FROZEN on 2026-08-23** under hash `f7cfb197de8d1f75dd4ed606ad9f5be4700df40a7b5bbf5286a1470671167241` (recorded in [`configs/battery/FREEZE.yaml`](configs/battery/FREEZE.yaml), which also states the defect protocol). The hash covers `configs/battery/battery.yaml` and the five scoring source files, so a change to the measuring instrument is caught the same way as a change to the task list.
 
 ### 3.2 Retention with chance adjustment
 
@@ -110,7 +112,7 @@ Hygiene rules: download scripts and content hashes ship in the repository; weigh
 
 ```mermaid
 flowchart TB
-    subgraph frozen["Frozen scoreboard (hash-checked in CI after M1)"]
+    subgraph frozen["Frozen scoreboard (frozen 2026-08-23, hash-checked in CI)"]
         battery["Task battery<br/>4 capabilities, zero-shot"]
         metric["Retention metric<br/>R_c and control attribution A_c"]
         bands["Noise-band policy<br/>seed + bootstrap components"]
