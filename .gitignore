@@ -1,0 +1,19 @@
+# Environments
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Assets: weights and data never enter git; scripts and hashes do
+assets/
+
+# Run outputs: checkpoints and scratch stay local; tracker/runs/*.json is committed
+outputs/
+checkpoints/
+
+# Editor and OS noise
+.vscode/
+.idea/
+.DS_Store
