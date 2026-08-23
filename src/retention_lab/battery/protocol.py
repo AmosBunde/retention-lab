@@ -59,18 +59,21 @@ class TorchCausalLM:
     tokens are never truncated.
     """
 
-    def __init__(self, model: torch.nn.Module, tokenizer: Tokenizer, max_len: int):
+    def __init__(
+        self, model: torch.nn.Module, tokenizer: Tokenizer, max_len: int, device: str = "cpu"
+    ):
         self.model = model
         self.tokenizer = tokenizer
         self.max_len = max_len
+        self.device = device
 
     @torch.no_grad()
     def _token_logprobs(self, tokens: list[int]) -> tuple[torch.Tensor, torch.Tensor]:
         """Per-position log p(token[i] | tokens[:i]) and greedy flags, i >= 1."""
-        ids = torch.tensor(tokens, dtype=torch.long).unsqueeze(0)
+        ids = torch.tensor(tokens, dtype=torch.long, device=self.device).unsqueeze(0)
         self.model.eval()
-        logits = self.model(ids[:, :-1])
-        logprobs = F.log_softmax(logits, dim=-1)[0]
+        logits = self.model(ids[:, :-1]).float()
+        logprobs = F.log_softmax(logits, dim=-1)[0].cpu()
         targets = ids[0, 1:]
         picked = logprobs[torch.arange(targets.shape[0]), targets]
         greedy = logprobs.argmax(dim=-1) == targets
