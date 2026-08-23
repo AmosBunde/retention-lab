@@ -289,6 +289,66 @@ The total budget is 50 to 80 GPU hours on rented single-GPU instances. Every run
 
 Only real runs produce tracker records. Nothing in this repository simulates, mocks, or fabricates a training environment, a run, a curve, or a result; the scoreboard, the report, and every pull request body contain tracker data from real executions only. GPU hours and cost appear in every results table.
 
+### 10.1 Operator runbook for the pending runs
+
+This subsection is the complete recipe for executing every pending run. It exists so that any operator with a single-GPU instance can finish the study without excavating issue threads; the approval requests on the issues remain the authoritative record of what the owner has cleared.
+
+**Preconditions, restated where the operator will read them.** Every run below launches only after the owner has approved it on its tracking issue with an instance and an hourly rate; the running total against the 50 to 80 hour budget is restated at each approval. GPU hours are measured by the harness and cost is derived from the rate, so no number in a record is typed in. Only real executions produce records, and every record returns to the repository through a pull request on the run's issue.
+
+**Getting an instance.** Any single 24 GB to 40 GB CUDA card works (RTX 4090 or A100 class). The two common paths:
+
+1. Marketplace (vast.ai, RunPod, or similar): rent the card, choose an image-compatible template with Docker, and note the hourly rate; it goes into every command below and into the tracker.
+2. Self-managed cloud VM (for example a Compute Engine or EC2 GPU instance): attach a persistent volume at `/workspace`, install Docker with the NVIDIA container toolkit, and proceed identically.
+
+One-time setup on the instance:
+
+```bash
+docker pull ghcr.io/amosbunde/retention-lab-cuda:sha-5d42be749d60
+docker run --gpus all -v /workspace:/workspace \
+  ghcr.io/amosbunde/retention-lab-cuda:sha-5d42be749d60 -- \
+  uv run python -m retention_lab.data.assets
+```
+
+`make assets` inside the image verifies every model file and corpus shard against the sha256 manifest and refuses to proceed on any mismatch.
+
+**Stage 1: teacher denominators (issue #10, up to 3 GPU hours).** Completes the frozen scoreboard; the teacher is scored exactly once.
+
+```bash
+docker run --gpus all -v /workspace:/workspace \
+  ghcr.io/amosbunde/retention-lab-cuda:sha-5d42be749d60 -- \
+  uv run python -m retention_lab.battery.score_model \
+    --model EleutherAI/pythia-1.4b \
+    --revision fedc38a16eea3bd36a96b906d78d11d2ce18ed79 \
+    --kind teacher --run-id teacher-battery-v1 --slice full \
+    --device cuda --dtype float32 \
+    --hourly-rate-usd RATE --instance "PROVIDER AND CARD" \
+    --image-tag sha-5d42be749d60 \
+    --out /workspace/teacher-battery-v1.json
+```
+
+The owner may alternatively approve running this one stage on a CPU workstation inside the same image at zero cost (roughly 17 CPU hours); that deviation from the GPU protocol is decided and recorded on issue #10, never taken silently.
+
+**Stage 2: calibration, then the control pair (issue #22, up to 9 GPU hours for the pair).** Run a 100-step calibration segment first; it verifies memory headroom, bf16, throughput, and resume on the instance, and its output never enters the tracker:
+
+```bash
+docker run --gpus all -v /workspace:/workspace \
+  ghcr.io/amosbunde/retention-lab-cuda:sha-5d42be749d60 -- \
+  uv run python -m retention_lab.train.run_training \
+    --config configs/variants/control.yaml --seed 1 \
+    --device cuda --bf16 --steps-override 100 \
+    --out-dir /workspace/runs/calibration \
+    --hourly-rate-usd RATE --instance "PROVIDER AND CARD" \
+    --image-tag sha-5d42be749d60
+```
+
+Kill the calibration once by hand mid-run and relaunch it to watch the resume; then run the full pair by repeating the command without `--steps-override`, with `--seed 1` and `--seed 2` and out-dirs `/workspace/runs/control-seed1` and `control-seed2`. A reclaimed instance is safe: relaunching the identical command resumes bit-identically and increments the recorded reclaim count.
+
+**Stage 3: the experiment arms (issues #23 to #26), one approval at a time, in order.** Each arm is the same command with its variant file and both seeds: `e1-reverse-kl.yaml` plus the baseline arm `../baseline.yaml` for E1, then `e2-temperature-4.yaml`, `e3-mixture-30.yaml`, `e4-init-pretrained.yaml`. E3 first needs the teacher-generation run (issue #14): the pool-size choice (roughly 5 hours for a fresh 157M-token pool, or half the pool at half the cost with a documented repetition confound) is decided on the E3 approval, and generated shards pass to training with `--generated-dir`.
+
+**Stage 4: INT8 and the tradeoff table (issues #28 and #29).** Quantize the best-attributed student with `retention_lab.deploy.int8`, rescore the full battery on CPU, and measure latency and memory under the fixed protocol in the same module.
+
+**Returning results.** Copy each run's JSON record from its out-dir into `tracker/runs/`, open a pull request on the run's issue (experiment pull requests lead with the retention table and end with a non-empty "What I was wrong about"), and regenerate every table with `make results`. CI validates each record's schema, including the mandatory cost fields, before it can merge.
+
 ## 11. Experiment series
 
 Twelve training runs are planned: the control and five distillation variants, at two seeds each. Each experiment issue pre-registers its hypothesis before any run launches.
@@ -305,7 +365,7 @@ The baseline arm (forward KL, T=2.0, 0 percent teacher-generated data, from-scra
 
 ## 12. Results
 
-Results tables are generated from `tracker/runs/` records of real GPU runs and inserted here as experiments merge. As of the current commit, no GPU run has executed, so this section intentionally contains the planned run matrix instead of numbers; the definition of done for the project replaces this matrix with the full per-capability table (retention against teacher, delta against control, band verdict, GPU hours, cost) for every arm listed in section 11.
+Results tables are generated from `tracker/runs/` records of real GPU runs and inserted here as experiments merge. As of the current commit, no GPU run has executed, so this section intentionally contains the planned run matrix instead of numbers; the definition of done for the project replaces this matrix with the full per-capability table (retention against teacher, delta against control, band verdict, GPU hours, cost) for every arm listed in section 11. Every pending run is executable from the operator runbook in section 10.1 by anyone with an approved instance.
 
 | Run | Status |
 |---|---|
