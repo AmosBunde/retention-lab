@@ -66,9 +66,18 @@ def score_and_record(
     slice_name: str,
     meta: dict,
 ) -> ScoreRecord:
+    """Score and assemble the record; hours are measured, cost is derived.
+
+    GPU hours come from the measured wall time of the scoring itself and the
+    cost from the supplied marketplace rate, so neither number can be typed
+    in wrong or invented; the rate and the instance name are the only human
+    inputs.
+    """
     started = time.monotonic()
     grouped = run_battery(lm, tokenizer, vocab_size, battery_cfg, slice_name)
     wall = time.monotonic() - started
+    gpu_hours = round(wall / 3600.0, 4)
+    rate = float(meta["hourly_rate_usd"])
     return ScoreRecord(
         run_id=meta["run_id"],
         kind=meta["kind"],
@@ -76,8 +85,8 @@ def score_and_record(
         revision=meta["revision"],
         battery_hash=scoreboard_hash(repo_root()),
         slice=slice_name,
-        gpu_hours=float(meta["gpu_hours"]),
-        cost_usd=float(meta["cost_usd"]),
+        gpu_hours=gpu_hours,
+        cost_usd=round(gpu_hours * rate, 4),
         instance=meta["instance"],
         image_tag=meta["image_tag"],
         wall_seconds=round(wall, 3),
@@ -102,8 +111,12 @@ def main() -> None:
     parser.add_argument("--slice", choices=["ci", "full"], default="full")
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--dtype", default="float32")
-    parser.add_argument("--gpu-hours", type=float, required=True)
-    parser.add_argument("--cost-usd", type=float, required=True)
+    parser.add_argument(
+        "--hourly-rate-usd",
+        type=float,
+        required=True,
+        help="marketplace rate of the instance; hours are measured, cost is derived",
+    )
     parser.add_argument("--instance", required=True)
     parser.add_argument("--image-tag", required=True)
     parser.add_argument("--out", required=True)
@@ -121,8 +134,7 @@ def main() -> None:
         "kind": args.kind,
         "model": args.model,
         "revision": args.revision,
-        "gpu_hours": args.gpu_hours,
-        "cost_usd": args.cost_usd,
+        "hourly_rate_usd": args.hourly_rate_usd,
         "instance": args.instance,
         "image_tag": args.image_tag,
     }
@@ -130,7 +142,10 @@ def main() -> None:
         lm, tokenizer, tokenizer.vocab_size, battery_cfg, args.slice, meta
     )
     write_record(record, Path(args.out))
-    print(f"score_model: wrote {args.out} (battery_hash={record.battery_hash[:12]})")
+    print(
+        f"score_model: wrote {args.out} (battery_hash={record.battery_hash[:12]}, "
+        f"gpu_hours={record.gpu_hours}, cost_usd={record.cost_usd})"
+    )
 
 
 if __name__ == "__main__":
