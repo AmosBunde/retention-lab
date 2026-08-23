@@ -6,6 +6,27 @@
 # 2026-08-23 (LFS oids for weights, locally computed sha256 for small
 # files), never guessed. The corpus section is added by the corpus issue.
 
+corpus:
+  fineweb-edu-sample:
+    repo: HuggingFaceFW/fineweb-edu
+    repo_type: dataset
+    revision: 87f09149ef4734204d70ed1d046ddc9ca3f2b8f9
+    license: odc-by
+    # Two shards of the 10BT sample, roughly 1.4B GPT-2-reference tokens,
+    # against a 500M token budget per training run. Document i (global index
+    # across shards in manifest order) is held out for validation monitoring
+    # iff i % heldout_stride == 0; the frozen battery's bits-per-byte task
+    # deliberately uses WikiText-2 instead of this corpus (see battery.yaml),
+    # so training-corpus choices cannot move the frozen scoreboard.
+    heldout_stride: 997
+    files:
+      sample/10BT/000_00000.parquet:
+        size: 2152819114
+        sha256: b1ba7b2ce4cb5ea6ef42dca40263eabb85f37700d01693a68e9b30a31d78e871
+      sample/10BT/001_00000.parquet:
+        size: 2152222432
+        sha256: 3fcf2dc69cd52503986276d3d2d26a8c356d0f2ea28a0de4fdbda8cf87755693
+
 models:
   teacher:
     repo: EleutherAI/pythia-1.4b
