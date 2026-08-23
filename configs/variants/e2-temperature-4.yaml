@@ -1,0 +1,7 @@
+# E2 arm: distillation temperature 4.0; the loss block is the single
+# override and differs from the baseline in the temperature key alone.
+inherit: ../baseline.yaml
+loss:
+  name: forward_kl
+  temperature: 4.0
+  alpha: 0.5

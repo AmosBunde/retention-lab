@@ -1,0 +1,46 @@
+# The single parent every experiment arm inherits from. A variant overrides
+# exactly one top-level block; the config-diff test fails anything else.
+#
+# Seeds: this shared config seed pins the data order for every run of every
+# arm, so paired arms consume identical batches. The per-run seed (passed at
+# launch, recorded in the tracker) varies only model initialization, giving
+# the two reruns of each arm their independent draws without touching data.
+
+seed: 20260823
+
+model:
+  config_repo: EleutherAI/pythia-160m
+  revision: 50f5173d932e8e61f858120bcb800b97af589f46
+
+init:
+  source: scratch
+
+teacher:
+  repo: EleutherAI/pythia-1.4b
+  revision: fedc38a16eea3bd36a96b906d78d11d2ce18ed79
+
+loss:
+  name: forward_kl
+  temperature: 2.0
+  alpha: 0.5
+
+mixture:
+  sources:
+    corpus: 1.0
+
+data:
+  corpus: fineweb-edu-sample
+  block_len: 1025
+
+train:
+  # 7629 steps * 64 sequences * 1024 tokens is the 500M token budget.
+  steps: 7629
+  batch_size: 64
+  accum_steps: 8
+  lr: 0.0006
+  warmup_steps: 500
+  min_lr_ratio: 0.1
+  clip_norm: 1.0
+  weight_decay: 0.1
+  vocab_limit: 50254
+  checkpoint_every: 500
