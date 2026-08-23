@@ -1,0 +1,24 @@
+# Teacher-generation configuration for the E3 mixture experiment.
+#
+# The pinned teacher continues prompts drawn deterministically from the
+# training split of the pinned corpus. Every output shard is labeled
+# source: teacher_generated and carries the teacher revision and the hash
+# of this sampling block, so provenance survives into any mixture. The
+# real generation run executes on the rented GPU only after the owner
+# approves the posted estimate.
+
+seed: 20260823
+
+teacher:
+  repo: EleutherAI/pythia-1.4b
+  revision: fedc38a16eea3bd36a96b906d78d11d2ce18ed79
+
+sampling:
+  n_documents: 350000
+  prompt_tokens: 64
+  max_new_tokens: 448
+  temperature: 0.8
+  top_p: 0.95
+
+output:
+  docs_per_shard: 50000
