@@ -1,0 +1,57 @@
+# Builds and publishes the pinned CUDA training image to GHCR whenever its
+# inputs change on main. The image is validated by running the CPU smoke
+# inside it before anything is pushed; tags are the short commit SHA plus
+# latest, and tracker records must name the SHA tag they ran under.
+
+name: cuda-image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docker/Dockerfile.cuda
+      - pyproject.toml
+      - uv.lock
+      - .python-version
+      - .github/workflows/cuda-image.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free runner disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.cuda
+          load: true
+          tags: ghcr.io/amosbunde/retention-lab-cuda:candidate
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Smoke inside the image (CPU path)
+        run: docker run --rm ghcr.io/amosbunde/retention-lab-cuda:candidate smoke
+      - name: Tag and push
+        run: |
+          SHORT_SHA=$(git rev-parse --short=12 HEAD)
+          docker tag ghcr.io/amosbunde/retention-lab-cuda:candidate ghcr.io/amosbunde/retention-lab-cuda:sha-$SHORT_SHA
+          docker tag ghcr.io/amosbunde/retention-lab-cuda:candidate ghcr.io/amosbunde/retention-lab-cuda:latest
+          docker push ghcr.io/amosbunde/retention-lab-cuda:sha-$SHORT_SHA
+          docker push ghcr.io/amosbunde/retention-lab-cuda:latest
